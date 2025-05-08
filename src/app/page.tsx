@@ -1,103 +1,196 @@
-import Image from "next/image";
+'use client'
+import { Suspense, use, useState } from "react";
+import AddTask from "@/components/addTask";
+import { DeleteTask, GetTasks, ToggleTask } from "@/utils/actions";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Pagination, Table } from "antd";
+import { DeleteFilled, EditFilled } from "@ant-design/icons";
+import type {  TableProps } from 'antd';
+import { PaginationType, Task } from "@/types/task";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+export default  function Home() {
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+
+  const [pagination, setPagination] = useState<PaginationType>({
+    limit: 10,
+    page: 0,
+  });
+  const [task, setTask] = useState<any>(null);
+  const {data:tasks, isLoading, isError} = useQuery({
+          queryKey: ['tasks',pagination.limit,pagination.page],
+          queryFn: ()=>GetTasks(pagination.limit,pagination.page),});
+
+  const queryClient = useQueryClient();
+
+  const {mutateAsync}=useMutation({
+    mutationFn: async (id: number) => {
+      return await ToggleTask(id)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({queryKey: ['tasksStat']});
+      queryClient.invalidateQueries({queryKey: ['tasks']});
+    }
+  });
+
+  const {mutateAsync: deleteTask}=useMutation({
+    mutationFn: async (id: number) => {
+      return await DeleteTask(id);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({queryKey: ['tasksStat']});
+      queryClient.invalidateQueries({queryKey: ['tasks']});
+
+    }
+  });
+
+  const columns: TableProps<Task>['columns']=[
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      sortDirections: ['descend', 'ascend'],
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => a.id - b.id,
+    },
+    {
+      title: 'Title',
+      dataIndex: 'title',
+      key: 'title',
+    },
+    {
+      title: 'Description',
+      dataIndex: 'content',
+      key: 'description',
+      // hidden: true,
+      render: (text, record) => (
+        <div className="text-gray-500 truncate">
+          {record.content}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      ),
+    },
+    {
+      title:'Priority',
+      dataIndex: 'priority',
+      key: 'priority',
+      render: (text, record) => (
+        <div className="flex items-center">
+          <div className={`w-2 h-2 rounded-full ${record.priority === 15 ? 'bg-red-500' : record.priority < 15 && record.priority >10 ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+          <span className="ml-2">{record.priority}</span>
+        </div>
+      ),
+      sortDirections: ['descend', 'ascend'],
+      defaultSortOrder: 'ascend',
+      sorter: (a, b) => a.priority - b.priority,
+      filters: [
+        {
+          text: 'High',
+          value: 15,
+        },
+        {
+          text: 'Medium',
+          value: 10,
+        },
+        {
+          text: 'Low',
+          value: 5,
+        },
+      ]
+    },
+    ,
+    {
+      title:'Completed',
+      dataIndex: 'done',
+      key: 'done',
+      render: (text, record) => (
+        <div className="flex items-center">
+          <input type="checkbox" checked={record.done} onChange={async()=>{
+            record.done=!record.done;
+            await mutateAsync(record.id);
+          }} className="w-4 h-4 rounded-full text-green-400 border-gray-300 focus:ring-blue-500 hover:cursor-pointer" />
+        </div>
+      ),
+    },
+    {
+      title:'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (text, record) => (
+        <div className="flex items-center">
+          <span className={`text-sm font-semibold ${record.done ? 'text-green-500' : 'text-red-500'}`}>{record.done ? 'Completed' : 'Pending'}</span>
+        </div>
+      ),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (text, record) => (
+        <div className="flex gap-2">
+          <Button icon={<EditFilled />} onClick={() => setTask(record)} className="bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600"></Button>
+          <Button icon={<DeleteFilled />} danger onClick={async() => {
+            await deleteTask(record.id);
+          }} ></Button>
+        </div>
+      )
+    },
+  ];
+
+
+
+  if(isError || tasks instanceof Error){
+    return <div className="text-red-500">Somethings is wrong</div>
+  }
+  if(isLoading){
+    return <div className="flex items-center h-full justify-center text-blue-300"><span>Loading...</span></div>
+  }
+  return (
+    <div className="h-full bg-gray-100 flex overflow-hidden">
+      <div className="flex-1 p-4 overflow-x-hidden overflow-y-auto">
+        <Suspense fallback={<div className="flex items-center h-full justify-center text-blue-300"><span>Loading...</span></div>}>
+          {
+            <Table className="h-full" dataSource={tasks?.data} columns={columns} rowKey="id" pagination={
+              {
+                pageSize: pagination.limit,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+                current: pagination.page + 1,
+                onShowSizeChange: (current, size) => {
+                  setPagination({
+                    ...pagination,
+                    limit: size,
+                    page: current - 1
+                  });
+                },
+                showLessItems: true,
+                showPrevNextJumpers: true,
+                showTitle: true,
+                pageSizeOptions: [5, 10, 20, 50],
+                position: ['bottomRight'],
+                total: tasks?.data.length,
+                onChange: (page, pageSize) => {
+                  setPagination({
+                    ...pagination,
+                    page: page - 1,
+                    limit: pageSize
+                  });
+                },
+              }
+            } onRow={(record) => {
+              return {
+                onClick: () => {
+                  setTask(record);
+                },
+              };
+            }
+            }>
+              
+            </Table>
+          }
+        </Suspense>
+      </div>
+      <div className="w-1/4 bg-blue-100 flex flex-col justify-center px-4">
+          <AddTask task={task}/>
+      </div>
     </div>
   );
 }
